@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- LifeLine AI - SUMO GUI Visualization Settings -->
+<viewsettings>
+    <scheme name="real world"/>
+    <delay value="100"/>
+    <viewport zoom="200" x="300" y="300"/>
+    
+    <vehicle>
+        <show-route value="true"/>
+        <show-route-noloops value="false"/>
+        <exaggerate value="2.0"/>
+        <show-blinker value="true"/>
+        <show-btrange value="false"/>
+        <show-lane-change-preference value="false"/>
+    </vehicle>
+    
+    <junction>
+        <show-junctions.id value="true"/>
+        <show-junction-shape value="true"/>
+        <draw-junction-shape value="true"/>
+        <exaggerate value="1.2"/>
+    </junction>
+    
+    <legend>
+        <show-color-legend value="true"/>
+        <show-size-legend value="true"/>
+    </legend>
+    
+    <opengl>
+        <antialiase value="true"/>
+        <dither value="true"/>
+    </opengl>
+</viewsettings>
