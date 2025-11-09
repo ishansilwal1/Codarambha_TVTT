@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lifeline - Traffic Management Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1>🚑 Lifeline Traffic Management</h1>
+                <p class="subtitle">Intelligent Ambulance Priority System</p>
+            </div>
+            <div class="header-right">
+                <div class="status-indicator" id="systemStatus">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Initializing...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Left Panel - Video Feed -->
+            <div class="panel video-panel">
+                <div class="panel-header">
+                    <h2>📹 Live Feed</h2>
+                    <div class="video-controls">
+                        <button class="btn btn-small" id="pauseBtn">Pause</button>
+                        <button class="btn btn-small" id="recordBtn">Record</button>
+                    </div>
+                </div>
+                <div class="video-container">
+                    <img id="videoFeed" src="/api/video/feed" alt="Live Video Feed">
+                    <div class="video-overlay">
+                        <div class="fps-counter" id="fpsCounter">FPS: 0</div>
+                    </div>
+                </div>
+                <div class="video-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Resolution:</span>
+                        <span class="stat-value" id="resolution">1280x720</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Detections:</span>
+                        <span class="stat-value" id="detectionCount">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Panel - Traffic Signals -->
+            <div class="panel signals-panel">
+                <div class="panel-header">
+                    <h2>🚦 Traffic Signals</h2>
+                    <div class="signal-controls">
+                        <button class="btn btn-small" id="overrideBtn">Manual Override</button>
+                    </div>
+                </div>
+                
+                <div class="intersection-container">
+                    <div class="signal-light north" id="signalNorth">
+                        <div class="signal-label">NORTH</div>
+                        <div class="lights">
+                            <div class="light red active"></div>
+                            <div class="light yellow"></div>
+                            <div class="light green"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-light east" id="signalEast">
+                        <div class="signal-label">EAST</div>
+                        <div class="lights">
+                            <div class="light red active"></div>
+                            <div class="light yellow"></div>
+                            <div class="light green"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="intersection-center">
+                        <div class="priority-indicator" id="priorityIndicator">
+                            <span class="priority-text">NORMAL MODE</span>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-light west" id="signalWest">
+                        <div class="signal-label">WEST</div>
+                        <div class="lights">
+                            <div class="light red active"></div>
+                            <div class="light yellow"></div>
+                            <div class="light green"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-light south" id="signalSouth">
+                        <div class="signal-label">SOUTH</div>
+                        <div class="lights">
+                            <div class="light red active"></div>
+                            <div class="light yellow"></div>
+                            <div class="light green"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Manual Control Panel (hidden by default) -->
+                <div class="manual-control-panel" id="manualControlPanel" style="display: none;">
+                    <h3>Manual Signal Control</h3>
+                    <div class="manual-controls">
+                        <div class="control-row">
+                            <label>North:</label>
+                            <button class="btn-signal red" onclick="setSignal('north', 'red')">Red</button>
+                            <button class="btn-signal yellow" onclick="setSignal('north', 'yellow')">Yellow</button>
+                            <button class="btn-signal green" onclick="setSignal('north', 'green')">Green</button>
+                        </div>
+                        <div class="control-row">
+                            <label>South:</label>
+                            <button class="btn-signal red" onclick="setSignal('south', 'red')">Red</button>
+                            <button class="btn-signal yellow" onclick="setSignal('south', 'yellow')">Yellow</button>
+                            <button class="btn-signal green" onclick="setSignal('south', 'green')">Green</button>
+                        </div>
+                        <div class="control-row">
+                            <label>East:</label>
+                            <button class="btn-signal red" onclick="setSignal('east', 'red')">Red</button>
+                            <button class="btn-signal yellow" onclick="setSignal('east', 'yellow')">Yellow</button>
+                            <button class="btn-signal green" onclick="setSignal('east', 'green')">Green</button>
+                        </div>
+                        <div class="control-row">
+                            <label>West:</label>
+                            <button class="btn-signal red" onclick="setSignal('west', 'red')">Red</button>
+                            <button class="btn-signal yellow" onclick="setSignal('west', 'yellow')">Yellow</button>
+                            <button class="btn-signal green" onclick="setSignal('west', 'green')">Green</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Statistics & Logs -->
+            <div class="panel info-panel">
+                <div class="panel-header">
+                    <h2>📊 Statistics</h2>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">🚑</div>
+                        <div class="stat-info">
+                            <div class="stat-number" id="totalDetections">0</div>
+                            <div class="stat-label">Total Detections</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">⚡</div>
+                        <div class="stat-info">
+                            <div class="stat-number" id="priorityActivations">0</div>
+                            <div class="stat-label">Priority Activations</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">⏱️</div>
+                        <div class="stat-info">
+                            <div class="stat-number" id="avgResponseTime">0</div>
+                            <div class="stat-label">Avg Response (ms)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">🕐</div>
+                        <div class="stat-info">
+                            <div class="stat-number" id="uptime">00:00:00</div>
+                            <div class="stat-label">System Uptime</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-header" style="margin-top: 20px;">
+                    <h2>📝 Recent Events</h2>
+                </div>
+                
+                <div class="events-log" id="eventsLog">
+                    <div class="event-item">
+                        <span class="event-time">--:--:--</span>
+                        <span class="event-message">System initialized</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Emergency Controls -->
+        <div class="emergency-controls">
+            <button class="btn btn-emergency" id="emergencyStopBtn">
+                🛑 EMERGENCY STOP
+            </button>
+            <button class="btn btn-success" id="startBtn">
+                ▶️ Start System
+            </button>
+            <button class="btn btn-warning" id="stopBtn">
+                ⏸️ Stop System
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal for alerts -->
+    <div class="modal" id="alertModal" style="display: none;">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <h2 id="modalTitle">Alert</h2>
+            <p id="modalMessage">Message here</p>
+            <button class="btn" onclick="closeModal()">OK</button>
+        </div>
+    </div>
+
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

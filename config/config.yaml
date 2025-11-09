@@ -1,0 +1,127 @@
+# Intelligent Traffic Management System - Configuration
+
+# System Settings
+system:
+  name: "Lifeline - Ambulance Priority System"
+  version: "1.0.0"
+  mode: "production"  # production, simulation, testing
+  debug: false
+
+# Camera Settings
+camera:
+  source: 0  # 0 for webcam, or RTSP URL: "rtsp://camera-ip:port/stream"
+  width: 1280
+  height: 720
+  fps: 30
+  buffer_size: 2
+  
+# Detection Model Settings
+detection:
+  model_path: "models/ambulance_yolov8n.pt"
+  confidence_threshold: 0.6
+  iou_threshold: 0.45
+  device: "cpu"  # cuda, cpu, mps
+  classes_to_detect: ["ambulance", "emergency_vehicle"]
+  input_size: 640
+  track_history: 30  # frames to track an ambulance
+  
+# Lane Configuration
+lanes:
+  num_lanes: 4
+  layout: "intersection"  # intersection, straight, t_junction
+  directions: ["north", "south", "east", "west"]
+  lane_regions:
+    north: [0, 0, 640, 360]      # x1, y1, x2, y2
+    south: [0, 360, 640, 720]
+    east: [640, 0, 1280, 360]
+    west: [640, 360, 1280, 720]
+
+# Traffic Signal Control
+traffic_control:
+  api_endpoint: "http://localhost:5001/api/signal"
+  protocol: "rest"  # rest, mqtt, modbus
+  default_green_duration: 45  # seconds
+  ambulance_green_duration: 60  # seconds
+  yellow_duration: 3
+  all_red_duration: 2
+  priority_timeout: 120  # reset to normal after this time
+  manual_override_enabled: true
+  
+# MQTT Settings (if using MQTT protocol)
+mqtt:
+  broker: "localhost"
+  port: 1883
+  topic_prefix: "traffic/intersection_1"
+  username: ""
+  password: ""
+  
+# API Server Settings
+api:
+  host: "0.0.0.0"
+  port: 8000
+  cors_origins: ["*"]
+  workers: 2
+  
+# Database Settings
+database:
+  type: "sqlite"
+  path: "data/lifeline.db"
+  log_detections: true
+  log_signal_changes: true
+  retention_days: 90
+  
+# Logging Settings
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  log_to_file: true
+  log_file: "data/logs/system.log"
+  log_rotation: "100 MB"
+  log_retention: "30 days"
+  
+# Dashboard Settings
+dashboard:
+  enable_live_feed: true
+  refresh_rate: 1000  # milliseconds
+  show_detection_boxes: true
+  show_lane_regions: true
+  enable_statistics: true
+  
+# Alerts and Notifications
+alerts:
+  enable_email: false
+  email_recipients: []
+  enable_sms: false
+  sms_recipients: []
+  enable_webhook: false
+  webhook_url: ""
+  
+# Performance Settings
+performance:
+  max_queue_size: 100
+  frame_skip: 0  # skip every N frames (0 = process all)
+  enable_gpu: true
+  num_threads: 4
+  memory_limit_mb: 2048
+  
+# Safety Settings
+safety:
+  conflict_detection: true
+  max_simultaneous_green: 2
+  emergency_stop_enabled: true
+  watchdog_timeout: 5  # seconds
+  fallback_to_normal: true
+  
+# Testing and Simulation
+simulation:
+  test_video_path: "data/test_videos/traffic_sample.mp4"
+  generate_fake_detections: false
+  fake_detection_interval: 10  # seconds
+  
+# Model Training (for custom training)
+training:
+  data_path: "data/ambulance_dataset.yaml"
+  epochs: 100
+  batch_size: 16
+  img_size: 640
+  save_period: 10
+  patience: 50
