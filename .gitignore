@@ -43,6 +43,14 @@ models/*.pt
 models/*.pth
 !models/.gitkeep
 
+# Ignore everything in ml/ except .ipynb files
+ml/*
+!ml/*.ipynb
+ml/dataset/
+ml/training_data/
+ml/runs/
+ml/weights/
+
 # Videos and Images
 *.mp4
 *.avi
