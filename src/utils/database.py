@@ -125,6 +125,8 @@ class Database:
                 detection.get('center', [None, None])[0],
                 detection.get('center', [None, None])[1]
             ))
+            detection_id = cursor.lastrowid
+            logger.debug(f"💾 Database: Detection saved (ID: {detection_id}, Lane: {detection.get('lane')})")
     
     def log_signal_change(self, direction: str, old_state: str, new_state: str, 
                          reason: str = None, priority_mode: bool = False):
@@ -218,47 +220,52 @@ class Database:
         with self.get_connection() as conn:
             cursor = conn.cursor()
             
-            since_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
+            # Calculate timestamp threshold (e.g., 24 hours ago)
+            since_timestamp = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d %H:%M:%S')
             
             # Total detections
             cursor.execute("""
                 SELECT COUNT(*) as count FROM detections 
-                WHERE DATE(timestamp) >= ?
-            """, (since_date,))
+                WHERE timestamp >= ?
+            """, (since_timestamp,))
             total_detections = cursor.fetchone()['count']
             
             # Priority activations
             cursor.execute("""
                 SELECT COUNT(*) as count FROM signal_changes 
-                WHERE priority_mode = 1 AND DATE(timestamp) >= ?
-            """, (since_date,))
+                WHERE priority_mode = 1 AND timestamp >= ?
+            """, (since_timestamp,))
             priority_activations = cursor.fetchone()['count']
             
             # Detections by lane
             cursor.execute("""
                 SELECT lane, COUNT(*) as count FROM detections 
-                WHERE DATE(timestamp) >= ?
+                WHERE timestamp >= ?
                 GROUP BY lane
-            """, (since_date,))
+            """, (since_timestamp,))
             by_lane = {row['lane']: row['count'] for row in cursor.fetchall()}
             
             # Detections by hour
             cursor.execute("""
                 SELECT strftime('%H', timestamp) as hour, COUNT(*) as count 
                 FROM detections 
-                WHERE DATE(timestamp) >= ?
+                WHERE timestamp >= ?
                 GROUP BY hour
                 ORDER BY hour
-            """, (since_date,))
+            """, (since_timestamp,))
             by_hour = {row['hour']: row['count'] for row in cursor.fetchall()}
             
-            return {
+            result = {
                 'total_detections': total_detections,
                 'priority_activations': priority_activations,
                 'detections_by_lane': by_lane,
                 'detections_by_hour': by_hour,
                 'period_days': days
             }
+            
+            logger.debug(f"📊 Database stats: {total_detections} detections, {priority_activations} priority activations (last {days} days)")
+            
+            return result
     
     def cleanup_old_records(self, days: int = 90):
         """

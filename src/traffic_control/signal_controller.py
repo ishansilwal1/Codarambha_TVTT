@@ -79,11 +79,7 @@ class TrafficSignalController:
         
         logger.info(f"🚨 PRIORITY MODE ACTIVATED for {lane.upper()} lane")
         
-        # Set all lights to red first (safety)
-        self._set_all_red()
-        time.sleep(self.all_red_duration)
-        
-        # Activate green for priority lane
+        # Immediately set priority lane to green (FAST RESPONSE - no delay)
         self.current_states[lane] = SignalState.GREEN
         
         # Set conflicting directions to red
@@ -95,7 +91,7 @@ class TrafficSignalController:
         self.priority_start_time = datetime.now()
         self.in_priority_mode = True
         
-        logger.info(f"Green signal activated for {lane} lane - Duration: {self.ambulance_green_duration}s")
+        logger.info(f"✅ GREEN signal IMMEDIATELY activated for {lane} lane - Duration: {self.ambulance_green_duration}s")
         return True
     
     def deactivate_priority(self):
@@ -105,12 +101,7 @@ class TrafficSignalController:
         
         logger.info("Priority mode deactivated - returning to normal operation")
         
-        # Yellow phase for priority lane
-        if self.priority_lane:
-            self.current_states[self.priority_lane] = SignalState.YELLOW
-            time.sleep(self.yellow_duration)
-        
-        # Set all to red before resuming normal cycle
+        # Immediately return to normal cycle (FAST TRANSITION)
         self._set_all_red()
         
         self.priority_lane = None
@@ -126,12 +117,13 @@ class TrafficSignalController:
         if self.manual_override:
             return
         
-        # Check priority timeout
-        if self.in_priority_mode and self.priority_start_time:
-            elapsed = (datetime.now() - self.priority_start_time).total_seconds()
-            if elapsed >= self.ambulance_green_duration:
-                logger.info("Priority duration expired")
-                self.deactivate_priority()
+        # NOTE: Priority timeout disabled - priority now deactivates only when ambulance is no longer detected
+        # This allows immediate response when ambulance appears and disappears
+        # if self.in_priority_mode and self.priority_start_time:
+        #     elapsed = (datetime.now() - self.priority_start_time).total_seconds()
+        #     if elapsed >= self.ambulance_green_duration:
+        #         logger.info("Priority duration expired")
+        #         self.deactivate_priority()
         
         # Normal cycle management (if not in priority mode)
         if not self.in_priority_mode:
@@ -145,19 +137,14 @@ class TrafficSignalController:
             # Change to next direction
             current_dir = self.directions[self.current_cycle_direction]
             
-            # Yellow phase
-            self.current_states[current_dir] = SignalState.YELLOW
-            time.sleep(self.yellow_duration)
-            
-            # Red phase
+            # Immediately change to red
             self.current_states[current_dir] = SignalState.RED
-            time.sleep(self.all_red_duration)
             
             # Move to next direction
             self.current_cycle_direction = (self.current_cycle_direction + 1) % len(self.directions)
             next_dir = self.directions[self.current_cycle_direction]
             
-            # Green phase for next direction
+            # Green phase for next direction (IMMEDIATE SWITCH)
             self.current_states[next_dir] = SignalState.GREEN
             
             # Ensure conflicting directions are red

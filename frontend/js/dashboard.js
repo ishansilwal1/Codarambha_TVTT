@@ -62,11 +62,15 @@ function setupEventListeners() {
 
 // Periodic updates (fallback if WebSocket fails)
 function startPeriodicUpdates() {
+    // Immediate first update
+    fetchStatus();
+    fetchStatistics();
+    
+    // Update status every 500ms for REAL-TIME response
     updateInterval = setInterval(async () => {
-        if (!websocket || websocket.readyState !== WebSocket.OPEN) {
-            await fetchStatus();
-        }
-    }, 2000);
+        await fetchStatus();
+        await fetchStatistics();
+    }, 500);  // Changed from 2000ms to 500ms for instant updates
 }
 
 // Fetch system status
@@ -74,9 +78,37 @@ async function fetchStatus() {
     try {
         const response = await fetch(`${API_BASE}/api/status`);
         const data = await response.json();
+        
+        // Update dashboard with status data
         updateDashboard(data);
+        
+        // Update detection and priority counts immediately
+        if (data.detections_count !== undefined) {
+            document.getElementById('totalDetections').textContent = data.detections_count;
+        }
+        if (data.priority_activations !== undefined) {
+            document.getElementById('priorityActivations').textContent = data.priority_activations;
+        }
+        if (data.uptime !== undefined) {
+            document.getElementById('uptime').textContent = formatUptime(data.uptime);
+        }
+        
+        updateSystemStatus('running', true);
     } catch (error) {
         console.error('Error fetching status:', error);
+        updateSystemStatus('error', false);
+        addEvent('Error', 'Connection lost');
+    }
+}
+
+// Fetch statistics separately for immediate updates
+async function fetchStatistics() {
+    try {
+        const response = await fetch(`${API_BASE}/api/statistics`);
+        const stats = await response.json();
+        updateStatistics(stats);
+    } catch (error) {
+        console.error('Error fetching statistics:', error);
     }
 }
 

@@ -64,6 +64,7 @@ class LifelineSystem:
         self.priority_count = 0
         self.current_detections = []
         self.display_frame = None
+        self.response_times = []  # Track response times for statistics
         
         # Threading
         self.processing_thread: Optional[threading.Thread] = None
@@ -160,11 +161,17 @@ class LifelineSystem:
                 detections = self.detector.detect(frame)
                 self.current_detections = detections
                 
+                # Check if we're in priority mode but no ambulance detected
+                if self.signal_controller.in_priority_mode and not detections:
+                    logger.info("🔄 No ambulance detected - deactivating priority mode")
+                    self.signal_controller.deactivate_priority()
+                
                 # Process detections
                 if detections:
+                    detection_time = datetime.now()
                     self.detection_count += len(detections)
                     
-                    # Log detections to database
+                    # Log detections to database IMMEDIATELY
                     for detection in detections:
                         self.db.log_detection({
                             'class_name': detection.class_name,
@@ -173,17 +180,74 @@ class LifelineSystem:
                             'bbox': detection.bbox,
                             'center': detection.center
                         })
+                        logger.info(f"✅ Detection logged: {detection.class_name} in {detection.lane} lane (confidence: {detection.confidence:.2f})")
                     
                     # Get priority lane
                     priority_lane = self.detector.get_priority_lane(detections)
                     
                     if priority_lane and not self.signal_controller.in_priority_mode:
-                        logger.info(f"🚨 Ambulance detected in {priority_lane} lane!")
+                        logger.info(f"🚨 AMBULANCE DETECTED in {priority_lane.upper()} lane!")
+                        
+                        # Measure response time
+                        response_start = datetime.now()
+                        
+                        # Log signal change to database BEFORE activation
+                        for direction in self.signal_controller.directions:
+                            old_state = self.signal_controller.current_states[direction].value
+                            self.db.log_signal_change(
+                                direction=direction,
+                                old_state=old_state,
+                                new_state='green' if direction == priority_lane else 'red',
+                                reason=f'Ambulance detected in {priority_lane}',
+                                priority_mode=True
+                            )
+                        
+                        # Activate priority
                         self.signal_controller.activate_priority(priority_lane)
                         self.priority_count += 1
+                        
+                        # Calculate response time
+                        response_end = datetime.now()
+                        response_time_ms = (response_end - response_start).total_seconds() * 1000
+                        self.response_times.append(response_time_ms)
+                        
+                        # Keep only last 100 measurements
+                        if len(self.response_times) > 100:
+                            self.response_times.pop(0)
+                        
+                        # Log system event with response time
+                        self.db.log_system_event(
+                            'priority_activated',
+                            f'Priority mode activated for {priority_lane} lane - Response time: {response_time_ms:.1f}ms',
+                            {'lane': priority_lane, 'detection_count': len(detections), 'response_time_ms': response_time_ms}
+                        )
+                        
+                        logger.info(f"⚡ Response time: {response_time_ms:.1f}ms")
                 
                 # Update signal controller
+                was_in_priority = self.signal_controller.in_priority_mode
+                priority_lane_before = self.signal_controller.priority_lane
+                
                 self.signal_controller.update()
+                
+                # Log if priority was deactivated
+                if was_in_priority and not self.signal_controller.in_priority_mode:
+                    # Log signal changes
+                    for direction in self.signal_controller.directions:
+                        self.db.log_signal_change(
+                            direction=direction,
+                            old_state='green' if direction == priority_lane_before else 'red',
+                            new_state=self.signal_controller.current_states[direction].value,
+                            reason='Priority mode deactivated - returning to normal cycle',
+                            priority_mode=False
+                        )
+                    
+                    # Log system event
+                    self.db.log_system_event(
+                        'priority_deactivated',
+                        f'Priority mode deactivated for {priority_lane_before} lane',
+                        {'lane': priority_lane_before}
+                    )
                 
                 # Draw detections on frame
                 display_frame = self.detector.draw_detections(
@@ -227,16 +291,23 @@ class LifelineSystem:
         """Get system status"""
         uptime = (datetime.now() - self.start_time).total_seconds() if self.start_time else 0
         
+        # Get real-time statistics from database
+        recent_stats = self.db.get_statistics(days=1)  # Today's stats
+        
+        # Calculate average response time from recent measurements
+        avg_response = sum(self.response_times) / len(self.response_times) if self.response_times else 0
+        
         return {
             'status': 'running' if self.is_running else 'stopped',
             'uptime': uptime,
-            'detections_count': self.detection_count,
-            'priority_activations': self.priority_count,
+            'detections_count': recent_stats.get('total_detections', 0),
+            'priority_activations': recent_stats.get('priority_activations', 0),
             'priority_mode': self.signal_controller.in_priority_mode,
             'priority_lane': self.signal_controller.priority_lane,
             'states': self.signal_controller.get_all_states(),
             'video_stats': self.video_processor.get_stats(),
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now().isoformat(),
+            'avg_response_time': round(avg_response, 1)  # in milliseconds
         }
     
     def get_statistics(self) -> dict:
